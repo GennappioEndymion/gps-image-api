@@ -8,4 +8,4 @@ python-dotenv>=1.0.0
 azure-storage-blob>=12.19.0
 gunicorn>=21.2.0
 pygal>=3.0.0
-# cairosvg>=2.7.0  # Optional - fallback chart rendering available
+cairosvg>=2.7.0

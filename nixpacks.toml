@@ -1,8 +1,12 @@
 [phases.setup]
-nixPkgs = ["python311", "cairo", "pango", "gdk-pixbuf", "libffi"]
+nixPkgs = ["python311", "cairo", "pango", "gdk-pixbuf", "libffi", "pkg-config", "fontconfig"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+  "export PKG_CONFIG_PATH=/nix/store/*/lib/pkgconfig:$PKG_CONFIG_PATH",
+  "export LD_LIBRARY_PATH=/nix/store/*/lib:$LD_LIBRARY_PATH",
+  "pip install --no-cache-dir -r requirements.txt"
+]
 
 [start]
 cmd = "python main.py"

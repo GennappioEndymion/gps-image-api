@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: gps-image-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: WORKERS
+        value: 1

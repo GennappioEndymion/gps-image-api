@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies including Cairo for chart rendering
+# Install system dependencies including Cairo for chart rendering and fonts
 RUN apt-get update && apt-get install -y \
     gcc \
     libcairo2-dev \
@@ -13,7 +13,10 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     pkg-config \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    fonts-dejavu-core \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
 
 # Copy requirements first for better caching
 COPY requirements.txt .

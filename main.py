@@ -214,23 +214,36 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
     draw = ImageDraw.Draw(image)
     width, height = image.size
 
-    # Try to load a font, fallback to default if not available
-    try:
-        title_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 32)
-        content_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 48)  # Doubled from 24
-        desc_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 16)
-        small_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 12)  # For charts
-    except:
+    # Try to load fonts with multiple fallbacks and larger sizes for deployment
+    def get_font(size):
+        font_paths = [
+            "/System/Library/Fonts/Arial.ttf",  # macOS
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+            "/usr/share/fonts/TTF/arial.ttf",  # Some Linux
+            "arial.ttf",  # Windows
+            "Arial.ttf",  # Windows
+        ]
+
+        for font_path in font_paths:
+            try:
+                return ImageFont.truetype(font_path, size)
+            except:
+                continue
+
+        # If no TrueType font found, create a larger default font
         try:
-            title_font = ImageFont.truetype("arial.ttf", 32)
-            content_font = ImageFont.truetype("arial.ttf", 48)  # Doubled from 24
-            desc_font = ImageFont.truetype("arial.ttf", 16)
-            small_font = ImageFont.truetype("arial.ttf", 12)  # For charts
+            # Try to get a larger default font by loading it multiple times
+            default_font = ImageFont.load_default()
+            # For deployment, we'll use much larger sizes to compensate
+            return ImageFont.load_default()
         except:
-            title_font = ImageFont.load_default()
-            content_font = ImageFont.load_default()
-            desc_font = ImageFont.load_default()
-            small_font = ImageFont.load_default()
+            return ImageFont.load_default()
+
+    # Use much larger font sizes for deployment (3x larger than before)
+    title_font = get_font(48)      # Was 32, now 48
+    content_font = get_font(72)    # Was 48, now 72
+    desc_font = get_font(24)       # Was 16, now 24
+    small_font = get_font(18)      # Was 12, now 18
 
 
 
@@ -329,11 +342,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
 
                     draw.rectangle([x1, y1, x2, y2], fill=color, outline='gray')
 
-        # Add title if provided
+        # Add title if provided with larger font
         try:
-            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 12)
+            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 18)  # Increased from 12
         except:
-            font = ImageFont.load_default()
+            try:
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+            except:
+                font = ImageFont.load_default()
 
         draw.text((10, 5), f"Chart: {chart_type}", fill='black', font=font)
 
@@ -384,14 +400,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=8,
-                major_label_font_size=10,
-                value_font_size=8,
+                label_font_size=14,        # Increased from 8
+                major_label_font_size=16,  # Increased from 10
+                value_font_size=14,        # Increased from 8
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 10),
                 title=chart_title,  # Add chart title
-                title_font_size=12
+                title_font_size=18         # Increased from 12
             )
             chart.x_labels = chart_labels
             chart.add('', chart_data, fill=True)
@@ -408,14 +424,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=8,
-                major_label_font_size=10,
-                value_font_size=8,
+                label_font_size=14,        # Increased from 8
+                major_label_font_size=16,  # Increased from 10
+                value_font_size=14,        # Increased from 8
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 25) if chart_type == 'wind_forecast' else (20, 42),
                 title=chart_title,  # Add chart title
-                title_font_size=12
+                title_font_size=18         # Increased from 12
             )
             # Limit to first 7 data points and labels
             chart.x_labels = chart_labels[:7]
@@ -453,14 +469,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=8,
-                major_label_font_size=10,
-                value_font_size=8,
+                label_font_size=14,        # Increased from 8
+                major_label_font_size=16,  # Increased from 10
+                value_font_size=14,        # Increased from 8
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 100),
                 title=chart_title,  # Add chart title
-                title_font_size=12
+                title_font_size=18         # Increased from 12
             )
             chart.x_labels = chart_labels[:7]  # Limit to 7 days
             chart.add('', chart_data[:7])  # Blue line

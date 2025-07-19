@@ -12,7 +12,7 @@ import math
 from dotenv import load_dotenv
 import pygal
 from pygal.style import Style
-import cairosvg
+# import cairosvg  # Not needed for Railway deployment
 from datetime import datetime
 from io import BytesIO
 
@@ -296,6 +296,49 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
 
         return '#3182CE'  # Default blue
 
+    def create_fallback_chart(chart_type, chart_data, chart_labels, chart_width, chart_height):
+        """Create a simple fallback chart using PIL when cairosvg is not available"""
+        # Create a simple colored rectangle as fallback
+        chart_image = Image.new('RGB', (chart_width, chart_height), 'white')
+        draw = ImageDraw.Draw(chart_image)
+
+        # Draw a simple bar chart representation
+        if chart_data:
+            max_val = max(chart_data) if chart_data else 1
+            bar_width = chart_width // len(chart_data) if chart_data else chart_width
+
+            for i, value in enumerate(chart_data):
+                if max_val > 0:
+                    bar_height = int((value / max_val) * (chart_height - 40))
+                    x1 = i * bar_width + 10
+                    y1 = chart_height - bar_height - 20
+                    x2 = x1 + bar_width - 5
+                    y2 = chart_height - 20
+
+                    # Use different colors based on chart type
+                    if 'fire' in chart_type.lower():
+                        color = '#FF6B6B'
+                    elif 'landslide' in chart_type.lower():
+                        color = '#8A2BE2'
+                    elif 'wind' in chart_type.lower():
+                        color = '#4ECDC4'
+                    elif 'temp' in chart_type.lower():
+                        color = '#45B7D1'
+                    else:
+                        color = '#2563EB'
+
+                    draw.rectangle([x1, y1, x2, y2], fill=color, outline='gray')
+
+        # Add title if provided
+        try:
+            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 12)
+        except:
+            font = ImageFont.load_default()
+
+        draw.text((10, 5), f"Chart: {chart_type}", fill='black', font=font)
+
+        return chart_image
+
     def create_pygal_chart(chart_type, chart_data, chart_labels, chart_width, chart_height, is_landslide=False, chart_title=""):
         """Create beautiful Pygal charts with Windfinder-style colors"""
 
@@ -422,19 +465,24 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
             chart.x_labels = chart_labels[:7]  # Limit to 7 days
             chart.add('', chart_data[:7])  # Blue line
 
-        # Render chart to SVG
-        svg_data = chart.render()
-
-        # Convert SVG to PNG with high quality
-        png_data = cairosvg.svg2png(
-            bytestring=svg_data,
-            output_width=chart_width,
-            output_height=chart_height,
-            dpi=150  # High DPI for crisp rendering
-        )
-
-        # Convert to PIL Image
-        chart_image = Image.open(BytesIO(png_data))
+        # Try to render as PNG directly (if cairosvg is available)
+        try:
+            import cairosvg
+            # Render chart to SVG
+            svg_data = chart.render()
+            # Convert SVG to PNG with high quality
+            png_data = cairosvg.svg2png(
+                bytestring=svg_data,
+                output_width=chart_width,
+                output_height=chart_height,
+                dpi=150  # High DPI for crisp rendering
+            )
+            # Convert to PIL Image
+            chart_image = Image.open(BytesIO(png_data))
+        except (ImportError, OSError):
+            # Fallback: create a simple chart using PIL
+            logger.warning("cairosvg not available, using fallback chart rendering")
+            chart_image = create_fallback_chart(chart_type, chart_data, chart_labels, chart_width, chart_height)
 
         return chart_image
 

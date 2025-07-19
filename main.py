@@ -239,11 +239,11 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
         except:
             return ImageFont.load_default()
 
-    # Use much larger font sizes for deployment (3x larger than before)
-    title_font = get_font(48)      # Was 32, now 48
-    content_font = get_font(72)    # Was 48, now 72
-    desc_font = get_font(24)       # Was 16, now 24
-    small_font = get_font(18)      # Was 12, now 18
+    # Reduced font sizes by 60% from previous deployment
+    title_font = get_font(19)      # Was 48, now 19 (60% reduction)
+    content_font = get_font(29)    # Was 72, now 29 (60% reduction)
+    desc_font = get_font(10)       # Was 24, now 10 (60% reduction)
+    small_font = get_font(7)       # Was 18, now 7 (60% reduction)
 
 
 
@@ -342,12 +342,12 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
 
                     draw.rectangle([x1, y1, x2, y2], fill=color, outline='gray')
 
-        # Add title if provided with larger font
+        # Add title if provided with reduced font
         try:
-            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 18)  # Increased from 12
+            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 7)   # Reduced by 60% from 18
         except:
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 7)
             except:
                 font = ImageFont.load_default()
 
@@ -400,14 +400,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=14,        # Increased from 8
-                major_label_font_size=16,  # Increased from 10
-                value_font_size=14,        # Increased from 8
+                label_font_size=6,         # Reduced by 60% from 14
+                major_label_font_size=6,   # Reduced by 60% from 16
+                value_font_size=6,         # Reduced by 60% from 14
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 10),
                 title=chart_title,  # Add chart title
-                title_font_size=18         # Increased from 12
+                title_font_size=7          # Reduced by 60% from 18
             )
             chart.x_labels = chart_labels
             chart.add('', chart_data, fill=True)
@@ -424,14 +424,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=14,        # Increased from 8
-                major_label_font_size=16,  # Increased from 10
-                value_font_size=14,        # Increased from 8
+                label_font_size=6,         # Reduced by 60% from 14
+                major_label_font_size=6,   # Reduced by 60% from 16
+                value_font_size=6,         # Reduced by 60% from 14
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 25) if chart_type == 'wind_forecast' else (20, 42),
                 title=chart_title,  # Add chart title
-                title_font_size=18         # Increased from 12
+                title_font_size=7          # Reduced by 60% from 18
             )
             # Limit to first 7 data points and labels
             chart.x_labels = chart_labels[:7]
@@ -469,14 +469,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=14,        # Increased from 8
-                major_label_font_size=16,  # Increased from 10
-                value_font_size=14,        # Increased from 8
+                label_font_size=6,         # Reduced by 60% from 14
+                major_label_font_size=6,   # Reduced by 60% from 16
+                value_font_size=6,         # Reduced by 60% from 14
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 100),
                 title=chart_title,  # Add chart title
-                title_font_size=18         # Increased from 12
+                title_font_size=7          # Reduced by 60% from 18
             )
             chart.x_labels = chart_labels[:7]  # Limit to 7 days
             chart.add('', chart_data[:7])  # Blue line

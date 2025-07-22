@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 import logging
 import io
@@ -23,10 +23,107 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Custom CSS for bigger, bold fonts and icons
+custom_css = """
+/* Make all fonts 20% bigger and bold */
+body, .swagger-ui {
+    font-size: 120% !important;
+    font-weight: bold !important;
+}
+
+/* Headers bigger and bolder */
+.swagger-ui h1, .swagger-ui h2, .swagger-ui h3, .swagger-ui h4, .swagger-ui h5, .swagger-ui h6 {
+    font-size: 140% !important;
+    font-weight: 900 !important;
+}
+
+/* API title */
+.swagger-ui .info .title {
+    font-size: 180% !important;
+    font-weight: 900 !important;
+}
+
+/* Operation summaries */
+.swagger-ui .opblock .opblock-summary {
+    font-size: 130% !important;
+    font-weight: bold !important;
+}
+
+/* Parameter names and descriptions */
+.swagger-ui .parameter__name {
+    font-size: 120% !important;
+    font-weight: bold !important;
+}
+
+/* Buttons */
+.swagger-ui .btn {
+    font-size: 120% !important;
+    font-weight: bold !important;
+    padding: 12px 24px !important;
+}
+
+/* Method badges (GET, POST, etc.) */
+.swagger-ui .opblock .opblock-summary-method {
+    font-size: 120% !important;
+    font-weight: 900 !important;
+    min-width: 80px !important;
+}
+
+/* Response codes */
+.swagger-ui .responses-inner h4 {
+    font-size: 130% !important;
+    font-weight: bold !important;
+}
+
+/* Input fields */
+.swagger-ui input[type=text], .swagger-ui input[type=number], .swagger-ui textarea {
+    font-size: 120% !important;
+    font-weight: bold !important;
+    padding: 12px !important;
+}
+
+/* Code blocks */
+.swagger-ui .highlight-code {
+    font-size: 115% !important;
+    font-weight: bold !important;
+}
+
+/* Navigation and sections */
+.swagger-ui .scheme-container {
+    font-size: 120% !important;
+    font-weight: bold !important;
+}
+
+/* Make expand/collapse icons bigger */
+.swagger-ui .opblock-summary-control:focus svg, .swagger-ui .opblock-summary-control:hover svg {
+    transform: scale(1.3) !important;
+}
+
+/* Response section styling */
+.swagger-ui .response-col_description {
+    font-size: 120% !important;
+    font-weight: bold !important;
+}
+
+/* Parameter descriptions */
+.swagger-ui .parameter__type {
+    font-size: 115% !important;
+    font-weight: bold !important;
+}
+
+/* Model names */
+.swagger-ui .model-title {
+    font-size: 130% !important;
+    font-weight: bold !important;
+}
+"""
+
 app = FastAPI(
     title="GPS Image Generator API",
     description="API that generates images based on GPS position and scalar value",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url=None,  # Disable default docs
+    redoc_url=None  # Disable redoc
 )
 
 class GPSPosition(BaseModel):
@@ -60,6 +157,40 @@ async def root():
 async def health_check():
     """Health check endpoint for Azure"""
     return {"status": "healthy", "service": "gps-image-api"}
+
+@app.get("/docs", response_class=HTMLResponse, include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Custom Swagger UI with bigger, bold fonts and icons"""
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>GPS Image Generator API - Documentation</title>
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+        <style>
+        {custom_css}
+        </style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+        <script>
+        SwaggerUIBundle({{
+            url: '/openapi.json',
+            dom_id: '#swagger-ui',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.presets.standalone
+            ],
+            layout: "BaseLayout",
+            deepLinking: true,
+            showExtensions: true,
+            showCommonExtensions: true
+        }});
+        </script>
+    </body>
+    </html>
+    """
 
 @app.post("/generate-image")
 async def generate_image(
@@ -214,11 +345,16 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
     draw = ImageDraw.Draw(image)
     width, height = image.size
 
-    # Try to load fonts with multiple fallbacks and larger sizes for deployment
+    # Try to load regular fonts with multiple fallbacks and larger sizes
     def get_font(size):
+        # Regular font paths - explicitly try lighter fonts first
         font_paths = [
-            "/System/Library/Fonts/Arial.ttf",  # macOS
+            "/System/Library/Fonts/HelveticaNeue.ttc",  # macOS - Helvetica Neue (lighter)
+            "/System/Library/Fonts/Helvetica.ttc",  # macOS - try Helvetica (lighter)
+            "/System/Library/Fonts/Times.ttc",  # macOS - Times (lighter)
+            "/System/Library/Fonts/Arial.ttf",  # macOS - Arial as fallback
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Linux
             "/usr/share/fonts/TTF/arial.ttf",  # Some Linux
             "arial.ttf",  # Windows
             "Arial.ttf",  # Windows
@@ -226,33 +362,38 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
 
         for font_path in font_paths:
             try:
-                return ImageFont.truetype(font_path, size)
-            except:
+                font = ImageFont.truetype(font_path, size)
+                logger.info(f"Successfully loaded font: {font_path} at size {size}")
+                return font
+            except Exception as e:
+                logger.debug(f"Failed to load font {font_path}: {e}")
                 continue
 
-        # If no TrueType font found, create a larger default font
+        # If no TrueType font found, use default font but log it
+        logger.warning(f"No TrueType fonts found, using default font at size {size}")
         try:
-            # Try to get a larger default font by loading it multiple times
-            default_font = ImageFont.load_default()
-            # For deployment, we'll use much larger sizes to compensate
             return ImageFont.load_default()
         except:
-            return ImageFont.load_default()
+            return None
 
-    # Reduced font sizes by 60% from previous deployment
-    title_font = get_font(19)      # Was 48, now 19 (60% reduction)
-    content_font = get_font(29)    # Was 72, now 29 (60% reduction)
-    desc_font = get_font(10)       # Was 24, now 10 (60% reduction)
-    small_font = get_font(7)       # Was 18, now 7 (60% reduction)
+    # Moderately bigger fonts to avoid bold appearance
+    title_font = get_font(24)      # Moderately increased
+    content_font = get_font(36)    # Moderately increased
+    desc_font = get_font(16)       # Moderately increased
+    small_font = get_font(12)      # Moderately increased
 
 
 
     # Date in top right corner
     from datetime import datetime
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M")
-    date_bbox = draw.textbbox((0, 0), current_date, font=title_font)
-    date_width = date_bbox[2] - date_bbox[0]
-    draw.text((width - date_width - 20, 20), current_date, fill='white', font=title_font)
+    if title_font:
+        date_bbox = draw.textbbox((0, 0), current_date, font=title_font)
+        date_width = date_bbox[2] - date_bbox[0]
+        draw.text((width - date_width - 20, 20), current_date, fill='white', font=title_font)
+    else:
+        # Fallback without bold effect
+        draw.text((width - 200, 20), current_date, fill='white')
 
     # Define panel layout (2 columns, 4 rows) - 8 modules total
     panel_width = (width - 160) // 2  # Wider panels
@@ -342,12 +483,12 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
 
                     draw.rectangle([x1, y1, x2, y2], fill=color, outline='gray')
 
-        # Add title if provided with reduced font
+        # Add title if provided with MUCH bigger font
         try:
-            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 7)   # Reduced by 60% from 18
+            font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 16)   # MUCH bigger - doubled from 8
         except:
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 7)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
             except:
                 font = ImageFont.load_default()
 
@@ -400,14 +541,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=6,         # Reduced by 60% from 14
-                major_label_font_size=6,   # Reduced by 60% from 16
-                value_font_size=6,         # Reduced by 60% from 14
+                label_font_size=14,        # MUCH bigger - doubled from 7
+                major_label_font_size=16,  # MUCH bigger - doubled from 7
+                value_font_size=14,        # MUCH bigger - doubled from 7
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 10),
                 title=chart_title,  # Add chart title
-                title_font_size=7          # Reduced by 60% from 18
+                title_font_size=16         # MUCH bigger - doubled from 8
             )
             chart.x_labels = chart_labels
             chart.add('', chart_data, fill=True)
@@ -424,14 +565,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=6,         # Reduced by 60% from 14
-                major_label_font_size=6,   # Reduced by 60% from 16
-                value_font_size=6,         # Reduced by 60% from 14
+                label_font_size=14,        # MUCH bigger - doubled from 7
+                major_label_font_size=16,  # MUCH bigger - doubled from 7
+                value_font_size=14,        # MUCH bigger - doubled from 7
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 25) if chart_type == 'wind_forecast' else (20, 42),
                 title=chart_title,  # Add chart title
-                title_font_size=7          # Reduced by 60% from 18
+                title_font_size=16         # MUCH bigger - doubled from 8
             )
             # Limit to first 7 data points and labels
             chart.x_labels = chart_labels[:7]
@@ -469,14 +610,14 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
                 x_label_rotation=0,
                 show_minor_x_labels=True,   # Show x-axis values
                 show_minor_y_labels=False,
-                label_font_size=6,         # Reduced by 60% from 14
-                major_label_font_size=6,   # Reduced by 60% from 16
-                value_font_size=6,         # Reduced by 60% from 14
+                label_font_size=14,        # MUCH bigger - doubled from 7
+                major_label_font_size=16,  # MUCH bigger - doubled from 7
+                value_font_size=14,        # MUCH bigger - doubled from 7
                 show_y_guides=True,
                 show_x_guides=False,
                 range=(0, 100),
                 title=chart_title,  # Add chart title
-                title_font_size=7          # Reduced by 60% from 18
+                title_font_size=16         # MUCH bigger - doubled from 8
             )
             chart.x_labels = chart_labels[:7]  # Limit to 7 days
             chart.add('', chart_data[:7])  # Blue line
@@ -523,8 +664,8 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
         draw.rectangle([x, y, x + actual_panel_width, y + panel_height],
                       fill=None, outline='gray', width=2)
 
-        # Draw icon (increased by 60%)
-        icon_size = int(48 * 1.6)  # 60% increase = 76.8 ≈ 77 pixels
+        # Draw icon (increased by 20% more, total 92% increase)
+        icon_size = int(48 * 1.92)  # 92% increase = 92.16 ≈ 92 pixels
         icon_x = x + 10
         icon_y = y + 10
 
@@ -547,11 +688,19 @@ def draw_information_panels(image: Image.Image, data: dict, latitude: float, lon
         text_x = icon_x + icon_size + 10
         text_width = actual_panel_width - icon_size - 30
 
-        # Title
-        draw.text((text_x, y + 10), panel['title'], fill='black', font=title_font)
+        # Title (no bold effect)
+        if title_font:
+            draw.text((text_x, y + 10), panel['title'], fill='black', font=title_font)
+        else:
+            # Fallback: simple text
+            draw.text((text_x, y + 10), panel['title'], fill='black')
 
-        # Content (larger font)
-        draw.text((text_x, y + 40), panel['content'], fill='darkblue', font=content_font)
+        # Content (larger font, no bold effect)
+        if content_font:
+            draw.text((text_x, y + 50), panel['content'], fill='darkblue', font=content_font)
+        else:
+            # Fallback: simple text
+            draw.text((text_x, y + 50), panel['content'], fill='darkblue')
 
         # Draw chart if applicable - BEAUTIFUL PYGAL CHARTS
         if panel.get('chart_type') != 'none' and panel.get('chart_type'):
